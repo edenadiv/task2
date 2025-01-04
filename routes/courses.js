@@ -1,78 +1,47 @@
 const express = require('express');
+const { check, validationResult } = require('express-validator');
 const Course = require('../models/Course');
 const Student = require('../models/Student');
-const authenticateToken = require('../middlewares/authenticateToken'); // Middleware for authentication
+const authenticateToken = require('../middlewares/authenticateToken');
 
 const router = express.Router();
 
 // Add a course (staff only)
-router.post('/', authenticateToken('staff'), async (req, res) => {
-    const { id, courseName, lecturer, creditPoints, maxStudents } = req.body;
-
-    try {
-        // Validate input
-        if (creditPoints < 3 || creditPoints > 5) {
-            return res.status(400).json({ message: 'Credit points must be between 3 and 5' });
+router.post(
+    '/',
+    authenticateToken('staff'),
+    [
+        check('id').isInt().withMessage('Course ID must be an integer'),
+        check('courseName').notEmpty().withMessage('Course name is required'),
+        check('lecturer').notEmpty().withMessage('Lecturer name is required'),
+        check('creditPoints').isInt({ min: 3, max: 5 }).withMessage('Credit points must be between 3 and 5'),
+        check('maxStudents').isInt({ min: 1 }).withMessage('Maximum students must be a positive integer'),
+    ],
+    async (req, res, next) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
         }
 
-        const course = new Course({ id, courseName, lecturer, creditPoints, maxStudents });
-        await course.save();
+        try {
+            const { id, courseName, lecturer, creditPoints, maxStudents } = req.body;
+            const course = new Course({ id, courseName, lecturer, creditPoints, maxStudents });
+            await course.save();
 
-        res.status(201).json({ message: 'Course added successfully', course });
-    } catch (error) {
-        res.status(500).json({ message: 'Error adding course', error: error.message });
+            res.status(201).json({ message: 'Course added successfully', course });
+        } catch (error) {
+            next(error); // Pass error to centralized handler
+        }
     }
-});
+);
 
 // View all courses
-router.get('/', authenticateToken(), async (req, res) => {
+router.get('/', authenticateToken(), async (req, res, next) => {
     try {
         const courses = await Course.find();
         res.json(courses);
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching courses', error: error.message });
-    }
-});
-
-// Register for a course (student only)
-router.post('/register', authenticateToken('student'), async (req, res) => {
-    const { courseId } = req.body;
-
-    try {
-        const student = await Student.findOne({ id: req.user.id });
-        const course = await Course.findOne({ id: courseId });
-
-        if (!course) {
-            return res.status(404).json({ message: 'Course not found' });
-        }
-
-        if (course.enrolledStudents.length >= course.maxStudents) {
-            return res.status(400).json({ message: 'Course is full' });
-        }
-
-        if (student.registeredCourses.includes(course._id)) {
-            return res.status(400).json({ message: 'Already registered for this course' });
-        }
-
-        const totalCredits = student.registeredCourses.reduce(async (total, courseId) => {
-            const course = await Course.findById(courseId);
-            return total + course.creditPoints;
-        }, 0);
-
-        if (totalCredits + course.creditPoints > 20) {
-            return res.status(400).json({ message: 'Exceeds 20 credit points. Drop a course to proceed.' });
-        }
-
-        // Register the student
-        student.registeredCourses.push(course._id);
-        course.enrolledStudents.push(student._id);
-
-        await student.save();
-        await course.save();
-
-        res.json({ message: 'Registered for course successfully', student });
-    } catch (error) {
-        res.status(500).json({ message: 'Error registering for course', error: error.message });
+        next(error); // Pass error to centralized handler
     }
 });
 
