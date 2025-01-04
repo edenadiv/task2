@@ -25,7 +25,15 @@ app.use((req, res, next) => {
     authenticateToken()(req, res, next);
 });
 
+const courseRoutes = require('./routes/courses');
+
+app.use('/courses', courseRoutes);
+
 app.use('/auth', authRoutes);
+
+app.get('/debug', authenticateToken(), (req, res) => {
+    res.json({ message: 'Token is valid', user: req.user });
+});
 
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);

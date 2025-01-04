@@ -1,10 +1,10 @@
 const jwt = require('jsonwebtoken');
 
-app.use(express.json());
-
-const authenticateToken = (req, res, next) => {
-    const authHeader = req.headers['authorization']; // Retrieve the token from the Authorization header
+const authenticateToken = (role = null) => (req, res, next) => {
+    const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
+    console.log('Headers:', req.headers);//
+
 
     if (!token) {
         return res.status(401).json({ message: 'Token is missing' });
@@ -15,8 +15,12 @@ const authenticateToken = (req, res, next) => {
             return res.status(403).json({ message: 'Invalid or expired token' });
         }
 
-        req.user = user; // Attach user details to the request object
-        next(); // Proceed to the next middleware or route handler
+        if (role && user.role !== role) {
+            return res.status(403).json({ message: 'Access denied: insufficient permissions' });
+        }
+
+        req.user = user;
+        next();
     });
 };
 
