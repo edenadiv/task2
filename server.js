@@ -1,28 +1,13 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const morgan = require('morgan');
-const connectDB = require('./config/db');
-const exampleRoute = require('./routes/exampleRoute');
-const authRoutes = require('./routes/authRoutes');
-
+const mongoose = require('mongoose');
+const Staff = require('./models/Staff');
+const Student = require('./models/Student');
+const Course = require('./models/Course');
 require('dotenv').config();
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+mongoose.connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+})
+    .then(() => console.log('Connected to MongoDB'))
+    .catch(err => console.error('MongoDB connection error:', err));
 
-// Connect to MongoDB
-connectDB();
-
-
-// Middleware
-app.use(bodyParser.json());
-app.use(morgan('dev'));
-
-// Routes
-app.use('/api/example', exampleRoute);
-app.use('/api/auth', authRoutes);
-
-// Start server
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
