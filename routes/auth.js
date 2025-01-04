@@ -34,7 +34,7 @@ router.post('/signup', async (req, res, next) => {
         await user.save();
         res.status(201).json({ message: `${role} registered successfully!` });
     } catch (error) {
-        next(error); // Pass error to centralized handler
+        next(error);
     }
 });
 
@@ -72,7 +72,7 @@ router.post('/login', async (req, res, next) => {
 
         res.status(200).json({ token });
     } catch (error) {
-        next(error); // Pass error to centralized handler
+        next(error);
     }
 });
 
